@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
@@ -28,28 +29,45 @@
 
 __author__ = "Alexander Weigl <alexweigl@gmail.com>"
 __date__ = "2012-10-26"
+__license__ = "gpl v3.0"
+
 
 import shutil
 import os, os.path, sys
 import re
 from fnmatch import fnmatch
+from optparse import OptionParser
 
 REGEX_CLAZZ = type(re.compile("."))
 
+def _optparser():
+    parser = OptionParser(
+    description="""Sorting files based on rules in ~/.patterns and ./.patterns""")
+    parser.add_option('-r', '--rules', dest='rules', action="store", default=None,                   help='rules file', metavar="FILE")
+    return parser
 
-def init_config():
-
+def init_config(rule_files = None):
+    
     def loadConfig(file_name):
         if not os.path.exists(file_name):
             return []
         try:
             g = {"r" :  re.compile}
-            execfile(file_name, g)
+            exec(compile(open(file_name).read(), file_name, 'exec'), g)
             return g["patterns"]
         except:
             print("could not load config")
 
-    return list(loadConfig("./.patterns")) + loadConfig("~/.patterns")
+    start = list(loadConfig("~/.patterns"))
+    
+    if rule_files is None:
+        return loadConfig("./.patterns")  + start
+    else:
+        for rf in rule_files.split(","):
+            start = loadConfig(rf) + start
+
+    return start
+
 
 def match(pattern, file_name):
     if type(pattern) is str:
@@ -70,8 +88,8 @@ def process(plist, dir):
     def handle(fil):
         for p in plist:
             target,patterns = p[0],p[1:]
-            if any(map(lambda p: match(p,fil), patterns )):
-                print "move %s to %s " %(fil    ,target)
+            if any([match(p,fil) for p in patterns]):
+                print("move %s to %s " %(fil    ,target))
                 shutil.move(fil, filename(target))
                 return
 
@@ -81,5 +99,8 @@ def process(plist, dir):
 
 
 if __name__ == "__main__":
-    print init_config()
+    parser = _optparser()
+    opts,args = parser.parse_args()
+    
+    init_config(opts.rules)
     process(init_config(), ".")
