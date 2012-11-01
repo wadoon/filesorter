@@ -1,0 +1,85 @@
+#!/usr/bin/python
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    Dieses Programm ist Freie Software: Sie können es unter den Bedingungen
+#    der GNU General Public License, wie von der Free Software Foundation,
+#    Version 3 der Lizenz oder (nach Ihrer Option) jeder späteren
+#    veröffentlichten Version, weiterverbreiten und/oder modifizieren.
+#
+#    Dieses Programm wird in der Hoffnung, dass es nützlich sein wird, aber
+#    OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+#    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.
+#    Siehe die GNU General Public License für weitere Details.
+#
+#    Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
+#    Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
+
+
+__author__ = "Alexander Weigl <alexweigl@gmail.com>"
+__date__ = "2012-10-26"
+
+import shutil
+import os, os.path, sys
+import re
+from fnmatch import fnmatch
+
+REGEX_CLAZZ = type(re.compile("."))
+
+
+def init_config():
+
+    def loadConfig(file_name):
+        if not os.path.exists(file_name):
+            return []
+        try:
+            g = {"r" :  re.compile}
+            execfile(file_name, g)
+            return g["patterns"]
+        except:
+            print("could not load config")
+
+    return list(loadConfig("./.patterns")) + loadConfig("~/.patterns")
+
+def match(pattern, file_name):
+    if type(pattern) is str:
+        return fnmatch(file_name, pattern)
+
+    if type(pattern) is REGEX_CLAZZ:
+        return pattern.match(file_name)
+
+    return pattern(file_name)
+
+def filename(name):
+    if type(name) is str:
+        return name
+    else:
+        return str(name)
+
+def process(plist, dir):
+    def handle(fil):
+        for p in plist:
+            target,patterns = p[0],p[1:]
+            if any(map(lambda p: match(p,fil), patterns )):
+                print "move %s to %s " %(fil    ,target)
+                shutil.move(fil, filename(target))
+                return
+
+    for fil in os.listdir(dir):
+        if os.path.isfile(fil):
+            handle(fil)
+
+
+if __name__ == "__main__":
+    print init_config()
+    process(init_config(), ".")
