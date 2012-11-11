@@ -54,7 +54,7 @@ def init_config(rule_files = None):
         try:
             g = {"r" :  re.compile}
             exec(compile(open(file_name).read(), file_name, 'exec'), g)
-            return g["patterns"]
+            return list(g["patterns"])
         except:
             print("could not load config")
 
