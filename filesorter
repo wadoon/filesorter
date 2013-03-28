@@ -43,7 +43,8 @@ REGEX_CLAZZ = type(re.compile("."))
 def _optparser():
     parser = OptionParser(
     description="""Sorting files based on rules in ~/.patterns and ./.patterns""")
-    parser.add_option('-r', '--rules', dest='rules', action="store", default=None,                   help='rules file', metavar="FILE")
+    parser.add_option('-r', '--rules', dest='rules', action="store", default=None,
+                      help='rules file', metavar="FILE")
     return parser
 
 def init_config(rule_files = None):
@@ -89,8 +90,11 @@ def process(plist, dir):
         for p in plist:
             target,patterns = p[0],p[1:]
             if any([match(p,fil) for p in patterns]):
-                print("move %s to %s " %(fil    ,target))
-                shutil.move(fil, filename(target))
+                try:
+                    shutil.move(fil, filename(target))
+                    print("move %s to %s " %(fil    ,target))
+                except shutil.Error as e:
+                    print(e)                    
                 return
 
     for fil in os.listdir(dir):
@@ -104,3 +108,4 @@ if __name__ == "__main__":
     
     init_config(opts.rules)
     process(init_config(), ".")
+
