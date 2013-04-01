@@ -2,6 +2,8 @@
 
 from gi.repository import Gtk
 from pprint import pprint
+from uuid import uuid1 as uuid
+#from pyyaml import dump,load
 import multiprocessing as mp
 
 def _get_builder(ctx):
@@ -58,7 +60,7 @@ class IconoTray:
 		self.menu.show_all()
 
 	def get_tray_menu(self):
-		return self.menu		
+                return self.menu		
 
 	def right_click_event_statusicon(self, icon, button, time):
 		self.get_tray_menu()
@@ -69,9 +71,16 @@ class IconoTray:
 		self.menu.popup(None, None, pos, icon, button, time)
 
 
+def Rule(dict):
+    def __init__(self,*args):
+        super(dict).__init__(*args)
+
+    def __str__(self):
+        return self['hint']
 
 
-class Window(object):
+from see import see
+class Window(object):    
     def __init__(self,rules=[]):
         self.builder = _get_builder(self)
         self.window = self.builder.get_object("window")
@@ -82,47 +91,23 @@ class Window(object):
         self.statusicon.connect("popup-menu", lambda *x: pprint(x))
         self.statusicon.set_visible(True)
 
-        print self.window.set_focus_chain((self.builder.get_object("actionBox"),))
-        self.fc = []
-
-        for r in rules:
-            self.showRule(r)
-
-    def showRule(self, rule):
-        a = ActionPanel()
-        a.set_model(rule)
-        panel = self.builder.get_object("actionBox")
-        panel.pack_end(a.view,False,False,0)        
-        self.window.set_focus_chain(self.fc+[a.view]+a.view.get_focus_chain())
-        print self.window.get_focus_chain()
-        a.view.grab_focus()
-        print self.window.get_focus()
-        print a.view.get_focus_chain()
-        
-    def show(self):
-        self.window.show_all()
-        dir(self.builder.get_object("statusicon"))
-        Gtk.main()
-
-    def addRule(self, obj=None):
-        self.showRule({})
-
-    #handle onSettings
-    #save model 
-    
-
-    def onDeleteWindow(self, *args):
-        Gtk.main_quit(*args)
-
-class ActionPanel(object):
-    def __init__(self, onChange = lambda:True):
-        self.model = {}
-        self.builder = _get_builder(self)
-        self.view = self.builder.get_object("gridAction")
-
         go = self.builder.get_object
 
-        go("expander1").set_expanded(True)
+        self.ruleStore = Gtk.ListStore(object)        
+        self.treeview = go('treeview')        
+        self.treeview.set_model(self.ruleStore)
+
+        def func(column,cell,model,ite,user_data):
+            value = model.get_value(ite,0)
+            x = value['hint']                
+            cell.set_property('text', str(x))
+            return 
+
+        cr = Gtk.CellRendererText()
+        self.treeColumn = Gtk.TreeViewColumn("Rules",cr,text=0)
+        self.treeColumn.set_cell_data_func(cr, func)
+
+        self.treeview.append_column(self.treeColumn)
         
         self.txt_folder  = go("fileChooserButtonFolder")
         self.txt_pattern = go("txtPattern")
@@ -131,28 +116,44 @@ class ActionPanel(object):
         self.txt_target = go("fileChooserButtonTarget")
         self.lbl_head = go("lblHead")
         self.txt_hint = go("txtHint")
+        
+        self.model = {}
+        for r in rules:
+            self.showRule(r)
 
-        self.notifyMainFrame = onChange
+    def showRule(self, rule):
+        self.ruleStore.append([rule])
+        print "rule appended", rule
+        self.treeview
+        #select new entry
+        
+        
+    def show(self):
+        self.window.show_all()
+        dir(self.builder.get_object("statusicon"))
+        Gtk.main()
 
-        self.view.set_focus_chain((go("expander1"),
-            self.txt_hint, self.txt_folder, self.txt_pattern,self.cbo_ptype,
-            self.txt_target))
-
-        self.set_model({'folder':'~', 'target':'~', 'pattern':'',
-                      'ptype':'', 'script':'','hint':"newrule"})
+    def addRule(self, obj=None):
+        self.showRule({'hint':'new entry'})
 
 
-    #TODO handle events onDelete, onCopy
+    def storeRules(self):
+        pass
 
+    
+    def onDeleteWindow(self, *args):
+        Gtk.main_quit(*args)
+
+
+    def ruleSelectionChanged(self,*args):
+        (model,sel) = self.treeview.get_selection().get_selected()
+        value = model.get_value(sel,0)
+        self.set_model(value,True)
+    
     def set_model(self,rule, updateUi = False):
         if not self.model: self.model = dict()
         self.model.update(rule)
-        print self.model
-        
-        self.lbl_head.set_label(self.model['hint'])
-
-        self.notifyMainFrame()
-
+                
         if updateUi:
             self.txt_hint.set_text(self.model['hint'])
             self.txt_pattern.set_text(self.model['pattern'])
@@ -163,9 +164,6 @@ class ActionPanel(object):
         
     def get_model(self):
         return self.model
-
-    def _get_view(self):
-        return self.view
 
     def updateModel(self,obj):
         print "update model"
@@ -183,4 +181,5 @@ class ActionPanel(object):
 
 
 if __name__ == "__main__":
-    Window().show()
+    r = {"folder":'~', 'target':'~/tmp', 'pattern':'abc', 'ptype':'Regex', 'script':None, 'hint':'TestRule'}
+    Window([r]).show()
