@@ -70,16 +70,8 @@ class IconoTray:
 
 		self.menu.popup(None, None, pos, icon, button, time)
 
-
-def Rule(dict):
-    def __init__(self,*args):
-        super(dict).__init__(*args)
-
-    def __str__(self):
-        return self['hint']
-
-
 from see import see
+
 class Window(object):    
     def __init__(self,rules=[]):
         self.builder = _get_builder(self)
@@ -123,23 +115,17 @@ class Window(object):
 
     def showRule(self, rule):
         self.ruleStore.append([rule])
-        print "rule appended", rule
-        self.treeview
-        #select new entry
-        
+        self.treeview.set_cursor(0)
         
     def show(self):
         self.window.show_all()
-        dir(self.builder.get_object("statusicon"))
         Gtk.main()
 
     def addRule(self, obj=None):
         self.showRule({'hint':'new entry'})
 
-
     def storeRules(self):
         pass
-
     
     def onDeleteWindow(self, *args):
         Gtk.main_quit(*args)
